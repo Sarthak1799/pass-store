@@ -13,7 +13,7 @@ pub fn init(path: &str) -> IoResult<()> {
     match env::var("APPDATA") {
         Ok(appdata_dir) => {
             let target_dir = format!("{}/pass_store", appdata_dir);
-            let init_path = format!("{}/path.txt", &target_dir);
+            let init_path = format!("{}/path", &target_dir);
             let private_key_path = format!("{}/private_key.pem", &target_dir);
             let store_path = format!("{}/store", path);
             let public_key_dir = format!("{}/key", store_path);
@@ -58,7 +58,7 @@ pub fn init(path: &str) -> IoResult<()> {
 pub fn get_path() -> IoResult<String> {
     match env::var("APPDATA") {
         Ok(appdata_dir) => {
-            let init_path = format!("{}/pass_store/path.txt", appdata_dir);
+            let init_path = format!("{}/pass_store/path", appdata_dir);
             let store_path_bytes = fs::read(&init_path)?;
             let store_path_str = String::from_utf8(store_path_bytes).map_err(|err| {
                 io::Error::new(
@@ -87,13 +87,25 @@ pub fn get_path() -> IoResult<String> {
     }
 }
 
-pub fn store(s: &str, pass: &str) -> IoResult<()> {
+pub fn store(
+    s: &str,
+    pass: String,
+    username: Option<String>,
+    comments: Option<String>,
+) -> IoResult<()> {
     let p = get_path()?;
     let public_key_path = format!("{}/key/public_key.pem", p);
     let store_path = format!("{}/{}", p, s);
+    let to_store = match (pass, username, comments) {
+        (p, Some(u), Some(c)) => format!("d+{}+{}+{}", p, u, c),
+        (p, Some(u), None) => format!("b+{}+{}", p, u),
+        (p, None, Some(c)) => format!("c+{}+{}", p, c),
+        (p, None, None) => format!("a+{}", p),
+    };
 
     let public_key_bytes = get_key_buffer(&public_key_path)?;
-    let encrypted_buffer_res = encryption::encrypt(public_key_bytes.as_slice(), pass.as_bytes());
+    let encrypted_buffer_res =
+        encryption::encrypt(public_key_bytes.as_slice(), to_store.as_bytes());
     match encrypted_buffer_res {
         Ok(buffer) => {
             let mut path_file = File::create(&store_path)?;

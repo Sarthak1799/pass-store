@@ -31,6 +31,12 @@ pub struct StoreCommands {
     pub path: String,
     /// the password to store
     pub password: String,
+    #[arg(short = 'u')]
+    /// optional field - username
+    pub username: Option<String>,
+    #[arg(short = 'c')]
+    ///  optional field - additional comments to store
+    pub comments: Option<String>,
 }
 
 #[derive(Debug, Args)]
