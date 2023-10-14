@@ -23,6 +23,8 @@ pub enum InputType {
     Get(GetCommand),
     /// remove an existing password
     Remove(RemoveCommands),
+    /// lists currrently stored passwords
+    List,
 }
 
 #[derive(Debug, Args)]

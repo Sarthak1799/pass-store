@@ -3,10 +3,10 @@ use std::{
     fs::{self, File},
     io::{self, Read, Write},
     path::Path,
+    process::Command,
 };
 
 use crate::rsa as encryption;
-
 pub type IoResult<T> = Result<T, io::Error>;
 
 pub fn init(path: &str) -> IoResult<()> {
@@ -14,7 +14,8 @@ pub fn init(path: &str) -> IoResult<()> {
         Ok(appdata_dir) => {
             let target_dir = format!("{}/pass_store", appdata_dir);
             let init_path = format!("{}/path", &target_dir);
-            let private_key_path = format!("{}/private_key.pem", &target_dir);
+            let private_key_dir = format!("{}/private_key", &target_dir);
+            let private_key_path = format!("{}/private_key.pem", &private_key_dir);
             let store_path = format!("{}/store", path);
             let public_key_dir = format!("{}/key", store_path);
             let public_key_path = format!("{}/public_key.pem", public_key_dir);
@@ -27,10 +28,18 @@ pub fn init(path: &str) -> IoResult<()> {
             path_file.write(path.as_bytes())?;
 
             // Create and write content to the second file
+            fs::create_dir_all(&private_key_dir)?;
+            Command::new("attrib")
+                .args(&["+h", &private_key_dir])
+                .status()?;
             let mut key_file = File::create(&private_key_path)?;
 
-            fs::create_dir_all(&store_path)?;
             fs::create_dir_all(&public_key_dir)?;
+
+            Command::new("attrib")
+                .args(&["+h", &public_key_dir])
+                .status()?;
+
             let mut public_key_file = File::create(&public_key_path)?;
 
             // Create the store directory
@@ -164,10 +173,27 @@ fn get_key_buffer(path: &str) -> IoResult<Vec<u8>> {
 
 fn get_private_key_path() -> IoResult<String> {
     match env::var("APPDATA") {
-        Ok(appdata_dir) => Ok(format!("{}/pass_store/private_key.pem", appdata_dir)),
+        Ok(appdata_dir) => Ok(format!(
+            "{}/pass_store/private_key/private_key.pem",
+            appdata_dir
+        )),
         Err(e) => Err(io::Error::new(
             io::ErrorKind::Other,
             format!("Failed to get AppData directory: {:?}", e),
         )),
     }
+}
+
+pub fn list() -> IoResult<()> {
+    let path = get_path()?;
+
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                println!("{:?}", entry.file_name());
+            }
+        }
+    }
+
+    Ok(())
 }

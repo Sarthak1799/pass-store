@@ -25,6 +25,13 @@ fn main() {
                 Ok(()) => println!("success!"),
             }
         }
+        args::InputType::List => {
+            let res = file_ops::list();
+            match res {
+                Err(e) => println!("failed! {:?}", e),
+                Ok(()) => (),
+            }
+        }
         args::InputType::Init(args::InitCommand { path }) => {
             let res = file_ops::init(&path);
             match res {
